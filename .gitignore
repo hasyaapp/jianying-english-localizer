@@ -1,22 +1,31 @@
+# macOS / editor noise
 .DS_Store
+.vscode/
+.idea/
+
+# Python generated files
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Local app bundles and proprietary binaries must not be committed.
+# Local environments
+.venv*/
+venv/
+
+# Proprietary/local app bundles
 *.app/
 VideoFusion-macOS-English.app/
 
-# Local virtual environments and package caches.
-.venv*/
-node_modules/
-
-# Generated scan reports and translation caches.
+# Generated scan reports and local translation caches
 deep-scan-*.json
 deep-scan-*.txt
 chinese-text-files.txt
 tools/*cache*.json
 
-# Local archives or temporary outputs.
+# Logs and temporary output
+*.log
 *.zip
 *.dmg
 *.tar

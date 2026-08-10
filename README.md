@@ -1,43 +1,44 @@
 # Jianying English Localizer
 
-Local English patching toolkit for the macOS Jianying desktop app, packaged as `VideoFusion-macOS.app`.
+A local macOS toolkit for translating the Chinese Jianying desktop app (`VideoFusion-macOS.app`) into English.
 
-This repository contains scripts and documentation only. It does not distribute Jianying, CapCut, modified app bundles, paid assets, or proprietary binaries.
+The project patches a **local copy** of Jianying. It does not distribute Jianying, CapCut, modified application bundles, paid assets, or proprietary binaries.
 
-## What This Does
+## What it translates
 
-The toolkit builds a local English copy of Jianying by translating UI resources from several layers:
+The localization pipeline covers more than the main language catalog:
 
-- Main `zh-Hans.po` translation catalog.
+- `zh-Hans.po` UI strings.
 - `Info.plist`, `InfoPlist.strings`, and bundled text resources.
-- H5/React smart text and voice-over panels.
-- Lynx commerce, subscription, invoice, refund, redeem, and feature popup templates.
-- Embedded NUL-delimited UI string tables inside selected macOS binaries.
-- Length-safe binary labels for feature names such as `Montage`, `Bullet Time`, `Hero Moment`, `J-Cut`, and `Freeze`.
+- H5/React smart-text, narration, lyrics, and voice-over interfaces.
+- Lynx commerce, subscription, invoice, refund, redeem, and AI-feature templates.
+- TTS display names and selected JSON resources.
+- Known feature names embedded in macOS binaries.
+- NUL-delimited UI-like Chinese strings in selected frameworks and helper binaries.
 
-The preferred translation source is official CapCut English resources when available. Missing strings fall back to local mappings and forced English replacements.
+Whenever possible, official CapCut English resources are used as the highest-quality reference. Remaining Jianying-only strings fall back to project mappings and optional local Chinese-to-English translation.
 
-## Safety Model
+## Safety model
 
-The workflow is designed to keep the original app untouched:
+The original Jianying installation is kept untouched:
 
-1. Copy `/Applications/VideoFusion-macOS.app` into a working directory.
-2. Patch only the copied bundle.
-3. Re-sign the copied bundle locally with an ad-hoc signature.
-4. Optionally install the result as `/Applications/Jianying EN.app`.
+1. Copy `/Applications/VideoFusion-macOS.app` to a working app bundle.
+2. Patch only the copy.
+3. Re-sign the modified copy with an ad-hoc macOS signature.
+4. Optionally install it separately as `/Applications/Jianying EN.app`.
 
-Do not commit or redistribute `.app` bundles. They are intentionally ignored by `.gitignore`.
+Do **not** commit or redistribute `.app` bundles. They are intentionally ignored by `.gitignore`.
 
 ## Requirements
 
 - macOS.
-- Installed Jianying app at `/Applications/VideoFusion-macOS.app`.
-- Installed CapCut global app at `/Applications/CapCut.app` for official English PO references.
+- Jianying installed at `/Applications/VideoFusion-macOS.app`.
 - Python 3.11+.
-- Optional but recommended: `argostranslate` for forced fallback translations.
-- Apple `codesign`, included with macOS command line tools.
+- Apple `codesign`.
+- Recommended: CapCut installed at `/Applications/CapCut.app` for official English localization references.
+- Optional: Argos Translate for forced translation of Jianying-only leftovers.
 
-Install the optional Python dependency:
+Install the optional translation dependency:
 
 ```bash
 python3 -m venv .venv-translate
@@ -45,66 +46,111 @@ python3 -m venv .venv-translate
 pip install -r requirements-translate.txt
 ```
 
-Argos also needs a local Chinese-to-English model. The exact model install flow depends on your environment; see Argos Translate documentation for package installation.
+Argos also requires a Chinese-to-English model installed in that environment.
 
-## Quick Start
+## Quick start
 
-From a clean working directory:
+From the repository root:
 
 ```bash
 ditto /Applications/VideoFusion-macOS.app ./VideoFusion-macOS-English.app
 python3 tools/localize_videofusion.py
 ```
 
-If you have Argos Translate installed and want to force translate catalog leftovers:
+If Argos Translate is available, force-translate remaining PO fallbacks:
 
 ```bash
 .venv-translate/bin/python tools/force_translate_fallbacks.py
 ```
 
-Patch residual H5, Lynx, and selected embedded binary strings:
+Patch residual H5, Lynx, and embedded binary strings:
 
 ```bash
 python3 tools/deep_patch_residual_chinese.py ./VideoFusion-macOS-English.app
 .venv-translate/bin/python tools/force_patch_embedded_segments.py
 ```
 
-Re-sign and verify:
+Re-sign and verify the patched app:
 
 ```bash
 codesign --force --deep --sign - ./VideoFusion-macOS-English.app
 codesign --verify --deep --strict --verbose=1 ./VideoFusion-macOS-English.app
 ```
 
-Install as a separate app:
+Install it separately:
 
 ```bash
 ditto ./VideoFusion-macOS-English.app "/Applications/Jianying EN.app"
 codesign --verify --deep --strict --verbose=1 "/Applications/Jianying EN.app"
 ```
 
-## Scripts
+For the complete patch order, see [docs/PIPELINE.md](docs/PIPELINE.md).
 
-- `tools/localize_videofusion.py`  
-  Main localization pass. Uses official CapCut English PO resources first, then project mappings.
+## Auto update
 
-- `tools/force_translate_fallbacks.py`  
-  Fills missing PO translations and fixes bad `none` / `null` fallback values.
+The repository includes a local macOS LaunchAgent that can rebuild `Jianying EN.app` when the installed Jianying source changes.
 
-- `tools/deep_patch_residual_chinese.py`  
-  Patches H5 leftovers, Lynx templates, feature labels, and known embedded binary strings with byte-safe replacements.
+Install it from the repository root:
 
-- `tools/force_patch_embedded_segments.py`  
-  Final deep pass for remaining NUL-delimited UI-like Chinese segments in selected binaries.
+```bash
+python3 tools/install_auto_update.py --kickstart
+```
 
-## Validation Checklist
+Useful commands:
 
-Before using or publishing a build, verify:
+```bash
+# Check whether a rebuild would happen
+python3 tools/auto_update_jianying_en.py --dry-run
+
+# Force a rebuild now
+python3 tools/auto_update_jianying_en.py --force
+
+# Remove the LaunchAgent
+python3 tools/install_auto_update.py --uninstall
+```
+
+See [docs/AUTO_UPDATE.md](docs/AUTO_UPDATE.md) for logs, state files, scheduling, and uninstall details.
+
+## Repository layout
+
+```text
+jianying-english-localizer/
+├── README.md
+├── requirements-translate.txt
+├── docs/
+│   ├── AUTO_UPDATE.md
+│   ├── PIPELINE.md
+│   ├── TROUBLESHOOTING.md
+│   └── VALIDATION.md
+└── tools/
+    ├── auto_update_jianying_en.py
+    ├── deep_patch_residual_chinese.py
+    ├── force_patch_embedded_segments.py
+    ├── force_translate_fallbacks.py
+    ├── install_auto_update.py
+    └── localize_videofusion.py
+```
+
+Local/generated files such as app bundles, `__pycache__`, scan reports, logs, and translation-cache JSON files are intentionally excluded from Git.
+
+## Script roles
+
+- `tools/localize_videofusion.py` — main localization pass; prefers official CapCut English resources, then local mappings.
+- `tools/force_translate_fallbacks.py` — fixes untranslated PO entries and bad `none` / `null` fallbacks.
+- `tools/deep_patch_residual_chinese.py` — patches H5, Lynx, known feature labels, and embedded strings outside the PO catalog.
+- `tools/force_patch_embedded_segments.py` — final byte-safe pass for remaining NUL-delimited UI-like Chinese segments.
+- `tools/auto_update_jianying_en.py` — rebuilds and installs the English copy only when the source Jianying app changes, or when forced.
+- `tools/install_auto_update.py` — installs or removes the LaunchAgent for periodic/source-change checks.
+
+## Validation
+
+At minimum, check the main PO catalog and code signature:
 
 ```bash
 python3 - <<'PY'
 from pathlib import Path
 import re
+
 po = Path("VideoFusion-macOS-English.app/Contents/Resources/po/zh-Hans.po").read_text("utf-8")
 print("po_han_count", len(re.findall(r"[\u4e00-\u9fff]", po)))
 print("po_bad_none_null", len(re.findall(r'msgstr "(?:none|null|None|NULL)"', po)))
@@ -113,14 +159,30 @@ PY
 codesign --verify --deep --strict --verbose=1 ./VideoFusion-macOS-English.app
 ```
 
-The expected PO checks are:
+Expected PO results:
 
-- `po_han_count 0`
-- `po_bad_none_null 0`
+```text
+po_han_count 0
+po_bad_none_null 0
+```
 
-See [docs/VALIDATION.md](docs/VALIDATION.md) for deeper scan notes.
+A raw byte scan can still find CJK-looking data in comments, fonts, generated code, or packed/model data that is not visible UI. Use targeted UI checks rather than treating every raw match as a translation failure.
 
-## Notes
+See [docs/VALIDATION.md](docs/VALIDATION.md) for the deeper validation workflow and [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) if the app fails to open or visible Chinese remains.
 
-This is a local patching toolkit for users who already have the app installed. It is not an official product, not affiliated with ByteDance, CapCut, or Jianying, and does not grant rights to redistribute any proprietary software.
+## Local-only files
 
+The following should stay on the local machine and should not be committed:
+
+- `VideoFusion-macOS-English.app`
+- `deep-scan-*.json`
+- `deep-scan-*.txt`
+- `chinese-text-files.txt`
+- `tools/*cache*.json`
+- `tools/__pycache__/`
+
+The translation-cache JSON files can be regenerated by the forced translation passes and may contain machine-specific/generated state.
+
+## Disclaimer
+
+This is an independent local patching toolkit for users who already have Jianying installed. It is not an official ByteDance, Jianying, or CapCut product and does not grant rights to redistribute proprietary software or assets.
